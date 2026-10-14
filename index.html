@@ -70,94 +70,146 @@ input,select{padding:9px;border:1px solid var(--line);border-radius:8px;backgrou
 <div class="card"><h2 style="margin-top:0">My products / services</h2>
 <form id="fp" style="grid-template-columns:1fr auto"><input id="np" placeholder="Add a product or service"><button class="btn">Add</button></form>
 <div id="pls" style="margin-top:10px"></div></div>
+<h2>Account &amp; sync</h2><div class="card" id="acct"></div>
 <h2>Your data</h2><div class="card">
-<button class="btn s" id="exs">Download sales (CSV)</button> <button class="btn s" id="exe">Download expenses (CSV)</button> <button class="btn s" id="bk">Backup (file)</button> <button class="btn s" id="rs">Restore backup</button><input type="file" id="rf" accept=".json" class="hide"> <button class="btn s" id="rst" style="color:var(--t)">Erase everything</button>
-<p class="sub" id="sv"></p></div></section>
+<button class="btn s" id="exs">Download sales (CSV)</button> <button class="btn s" id="exe">Download expenses (CSV)</button> <button class="btn s" id="bk">Backup (file)</button> <button class="btn s" id="rs">Restore backup</button><input type="file" id="rf" accept=".json" class="hide"> <button class="btn s" id="rst" style="color:var(--t)">Erase everything</button></div></section>
 <p class="sub" style="margin-top:24px">Profit = price − unit cost. Net profit = profit − expenses. Money owed counts all sales, all years.</p>
 </div>
+<script src="config.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.min.js"></script>
 <script>
 const $=id=>document.getElementById(id);
-const KEY='salesTrackerKE';let S={sales:[],exp:[],prods:[]},ref=null,yr=new Date().getFullYear();
+const KEY='salesTrackerKE3',CFG=window.CFG||{};
+const fresh=()=>({s:{},e:{},p:{},q:[],lastPull:null,shop:null,role:'',uid:null});
+let S=fresh(),sb=null,sess=null,me=null,names={},busy=false,cur='dash',yr=new Date().getFullYear(),aKey='';
 const today=()=>new Date().toISOString().slice(0,10);
 const fmt=n=>'KSh '+Math.round(n||0).toLocaleString('en-KE');
 const esc=s=>String(s??'').replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
-const uid=()=>Date.now().toString(36)+Math.random().toString(36).slice(2,5);
+const uid=()=>Date.now().toString(36)+Math.random().toString(36).slice(2,8);
 const tot=x=>x.q*x.u,prof=x=>x.q*(x.u-x.k),paid=x=>x.a==null?tot(x):x.a,bal=x=>Math.max(0,tot(x)-paid(x));
 const status=x=>bal(x)<=0?'Paid':paid(x)>0?'Partial':'Unpaid';
-function status_(){const el=$('st');
- if(!ref)el.textContent=window.claude?'Saved on this device (account sync unavailable)':'Offline mode: saved on this device';
- else el.textContent=navigator.onLine?'Saved to your account ✓':'Offline: saved on this device, will sync when online'}
-async function push(){if(!ref||!navigator.onLine)return status_();try{await ref.set({s:JSON.stringify(S)});status_()}catch(e){$('st').textContent='Saved on this device, will sync when online'}}
-function save(){S.t=Date.now();try{localStorage.setItem(KEY,JSON.stringify(S))}catch(e){}
- status_();push();render()}
-function ym(d){return[+d.slice(0,4),+d.slice(5,7)-1]}
+const L=k=>Object.values(S[k]);
+const persist=()=>{try{localStorage.setItem(KEY,JSON.stringify(S))}catch(e){}};
+const pend=(k,id)=>S.q.some(o=>o.k==k&&o.id==id);
+function queue(k,id,op){S.q=S.q.filter(o=>!(o.k==k&&o.id==id));S.q.push({k,id,op})}
+function add(k,r){r.by=r.by||me;r.t=r.t||Date.now();S[k][r.id]=r;queue(k,r.id,'set')}
+function put(k,r){r.t=Date.now();add(k,r);commit()}
+function del(k,id){delete S[k][id];queue(k,id,'del');commit()}
+function commit(){persist();render();flush()}
+const who=x=>!x.by?'\u2014':x.by==me?'You':(names[x.by]||'Team');
+function status_(){const n=S.q.length,el=$('st');
+ if(!sb)el.textContent='Saved on this device (cloud sync not set up)';
+ else if(!sess)el.textContent='Saved on this device. Sign in (Setup) to sync and share';
+ else if(!S.shop)el.textContent='Signed in. Create or join a shop (Setup) to sync';
+ else if(!navigator.onLine)el.textContent=n?`Offline: ${n} change${n>1?'s':''} saved, will sync when online`:'Offline: changes will sync when online';
+ else el.textContent=n?`Syncing ${n} change${n>1?'s':''}\u2026`:'Synced \u2713';
+ acct_()}
+const msg=t=>{const m=$('am');if(m)m.textContent=t};
+function acct_(){const k=[!!sb,!!sess,S.shop&&S.shop.id,S.role].join('|');
+ if(k!=aKey){aKey=k;let h='';
+  if(!sb)h='<p class=sub style="margin:0">Cloud sync is not set up yet. The app works fully on this device. To turn on sign-in and sharing, follow README step 1 and fill in config.js.</p>';
+  else if(!sess)h='<p class=sub style="margin-top:0">Sign in with your email to keep your data online, use it on all your devices and let people who sell for you add sales from their phones. The app keeps working offline; anything recorded offline is sent automatically once the device is back online.</p><div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:8px"><label>Email<input id=ae type=email autocomplete=username></label><label>Password<input id=ap type=password autocomplete=current-password></label><button type=button class=btn onclick="doIn()">Sign in</button><button type=button class="btn s" onclick="doUp()">Create account</button></div><p style="margin:10px 0 0"><a href="#" class=sub onclick="doForgot();return false">Forgot password?</a></p><p class=sub id=am></p>';
+  else if(!S.shop)h='<p style="margin-top:0">Signed in as <b>'+esc(sess.user.email)+'</b>. Choose one:</p><div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:10px"><div class=card><b>I own the shop</b><p class=sub>Creates a shop and gives you a code to share.</p><input id=sn2 placeholder="Shop name (optional)"><br><br><button type=button class=btn onclick="doCreate()">Create my shop</button></div><div class=card><b>I work in someone\u2019s shop</b><p class=sub>Type the code the owner gave you.</p><input id=jc placeholder="Shop code" style="text-transform:uppercase"><br><br><button type=button class=btn onclick="doJoin()">Join shop</button></div></div><p class=sub id=am></p>';
+  else h='<p style="margin:0">Signed in as <b>'+esc(sess.user.email)+'</b> \u00b7 '+(S.role=='owner'?'Owner':'Team member')+'</p><p>Shop: <b>'+esc(S.shop.name)+'</b> \u00b7 Shop code: <b style="font:800 20px Fraunces,Georgia,serif;letter-spacing:2px">'+esc(S.shop.code)+'</b></p><p class=sub>Give this code to the person who sells for you. They create their own account, choose \u201cI work in someone\u2019s shop\u201d and type the code. Both phones then see the same sales.</p><div id=tm></div><p class=sub id=am></p><button type=button class="btn s" onclick="flush()">Sync now</button> <button type=button class="btn s" onclick="doOut()">Sign out</button>';
+  $('acct').innerHTML=h}
+ const tm=$('tm');if(tm){const c={};[...L('s'),...L('e')].forEach(x=>{const k=x.by||'';c[k]=(c[k]||0)+1});
+  tm.innerHTML='<div class=sub style="margin-bottom:4px">People in this shop:</div>'+Object.entries(names).map(([i,n])=>`<div>${i==me?'You':esc(n)} <span class=sub>\u00b7 ${c[i]||0} entr${c[i]==1?'y':'ies'}</span></div>`).join('')}
+ $('rst').classList.toggle('hide',!!(sess&&S.shop&&S.role!='owner'))}
+window.doIn=async()=>{msg('Signing in\u2026');const{error}=await sb.auth.signInWithPassword({email:$('ae').value.trim(),password:$('ap').value});msg(error?error.message:'')};
+window.doUp=async()=>{const e=$('ae').value.trim(),p=$('ap').value;if(!e||p.length<6)return msg('Enter your email and a password of at least 6 characters.');msg('Creating account\u2026');const{data,error}=await sb.auth.signUp({email:e,password:p});if(error)return msg(error.message);msg(data.session?'':'Account created. Check your email to confirm it, then sign in.')};
+window.doForgot=async()=>{const e=$('ae').value.trim();if(!e)return msg('Type your email first.');const{error}=await sb.auth.resetPasswordForEmail(e,{redirectTo:location.origin+location.pathname});msg(error?error.message:'Reset link sent. Check your email.')};
+window.doOut=async()=>{if(S.q.length&&!confirm(`${S.q.length} change(s) have not synced yet and will be lost if you sign out. Sign out anyway?`))return;await sb.auth.signOut();S=fresh();names={};persist();render()};
+const setShop=(r,role)=>{r=Array.isArray(r)?r[0]:r;S.shop={id:r.id,name:r.name,code:r.code};S.role=role;S.uid=me;persist();afterAuth()};
+window.doCreate=async()=>{msg('Creating\u2026');const{data,error}=await sb.rpc('create_shop',{p_name:$('sn2').value.trim()||'My shop'});if(error)return msg(error.message);setShop(data,'owner')};
+window.doJoin=async()=>{const c=$('jc').value.trim();if(!c)return msg('Type the shop code.');msg('Joining\u2026');const{data,error}=await sb.rpc('join_shop',{p_code:c});if(error)return msg(error.message);setShop(data,'member')};
+async function team(){const{data}=await sb.from('members').select('user_id,display').eq('shop_id',S.shop.id);(data||[]).forEach(m=>names[m.user_id]=m.display||'Team member')}
+async function afterAuth(){if(!sess||!navigator.onLine)return status_();
+ try{if(S.uid&&S.uid!==me){S=fresh();persist()}
+  if(!S.shop){const{data}=await sb.from('members').select('role,shops(id,name,code)').eq('user_id',me).limit(1);
+   if(data&&data[0]&&data[0].shops){S.shop=data[0].shops;S.role=data[0].role;S.uid=me;persist()}}
+  if(S.shop)await team()
+ }catch(e){}
+ status_();render();if(S.shop)flush()}
+async function pull(){let n;do{let q=sb.from('records').select('id,kind,data,deleted,updated_at,by').eq('shop_id',S.shop.id).order('updated_at',{ascending:true}).limit(1000);
+ if(S.lastPull)q=q.gte('updated_at',S.lastPull);const{data,error}=await q;if(error)throw error;n=data.length;
+ data.forEach(r=>{S.lastPull=r.updated_at;if(!S[r.kind]||pend(r.kind,r.id))return;if(r.deleted)delete S[r.kind][r.id];else S[r.kind][r.id]=Object.assign({},r.data,{id:r.id,by:r.by})});
+ }while(n>=1000);if([...L('s'),...L('e')].some(x=>x.by&&!names[x.by]))await team();persist();render()}
+async function flush(){if(busy||!sb||!sess||!S.shop||!navigator.onLine)return status_();busy=true;
+ try{const ops=[...S.q];
+  if(ops.length){const rows=ops.map(o=>{const r=S[o.k][o.id],gone=o.op=='del'||!r;return{id:o.id,shop_id:S.shop.id,kind:o.k,data:gone?{}:r,deleted:gone,by:(r&&r.by)||me}});
+   const{error}=await sb.from('records').upsert(rows,{onConflict:'shop_id,id'});if(error)throw error;
+   S.q=S.q.filter(x=>!ops.includes(x));persist()}
+  await pull()}catch(e){}
+ busy=false;status_()}
+const ym=d=>[+d.slice(0,4),+d.slice(5,7)-1];
 function render(){
- const yrs=new Set([new Date().getFullYear(),yr]);[...S.sales,...S.exp].forEach(x=>yrs.add(+x.d.slice(0,4)));
+ const A=L('s'),B=L('e'),yrs=new Set([new Date().getFullYear(),yr]);[...A,...B].forEach(x=>yrs.add(+x.d.slice(0,4)));
  $('yr').innerHTML=[...yrs].sort().map(y=>`<option ${y==yr?'selected':''}>${y}</option>`).join('');
- const ss=S.sales.filter(x=>+x.d.slice(0,4)==yr),ee=S.exp.filter(x=>+x.d.slice(0,4)==yr);
- const sum=(a,f)=>a.reduce((t,x)=>t+f(x),0);
- const T=sum(ss,tot),P=sum(ss,prof),X=sum(ee,x=>x.a),owed=sum(S.sales,bal);
+ const ss=A.filter(x=>+x.d.slice(0,4)==yr),ee=B.filter(x=>+x.d.slice(0,4)==yr),sum=(a,f)=>a.reduce((t,x)=>t+f(x),0);
+ const T=sum(ss,tot),P=sum(ss,prof),X=sum(ee,x=>x.a),owed=sum(A,bal);
  const m=Array.from({length:12},()=>({s:0,e:0}));ss.forEach(x=>m[ym(x.d)[1]].s+=tot(x));ee.forEach(x=>m[ym(x.d)[1]].e+=x.a);
  const mx=Math.max(1,...m.map(z=>Math.max(z.s,z.e))),mn='JFMAMJJASOND';
  const by={};ss.forEach(x=>{const k=x.p;by[k]=by[k]||{s:0,p:0,n:0};by[k].s+=tot(x);by[k].p+=prof(x);by[k].n+=x.q});
  const rows=Object.entries(by).sort((a,b)=>b[1].p-a[1].p).map(([k,v])=>`<tr><td>${esc(k)}</td><td class=n>${fmt(v.s)}</td><td class=n>${fmt(v.p)}</td><td class=n>${v.n}</td></tr>`).join('');
- const dues=S.sales.filter(x=>bal(x)>0).map(x=>`<tr><td>${x.d}</td><td>${esc(x.p)}</td><td class=n>${fmt(bal(x))}</td><td><button class="btn sm s" onclick="settle('${x.id}')">Mark paid</button></td></tr>`).join('');
+ const dues=A.filter(x=>bal(x)>0).sort((a,b)=>a.d.localeCompare(b.d)).map(x=>`<tr><td>${x.d}</td><td>${esc(x.p)}</td><td class=n>${fmt(bal(x))}</td><td><button class="btn sm s" onclick="settle('${x.id}')">Mark paid</button></td></tr>`).join('');
  $('dash').innerHTML=`<div class=kp><div><b>${fmt(T)}</b><span>Sales ${yr}</span></div><div><b>${fmt(P)}</b><span>Gross profit</span></div><div><b>${fmt(X)}</b><span>Expenses</span></div><div class=net><b>${fmt(P-X)}</b><span>NET PROFIT</span></div><div class=owe><b>${fmt(owed)}</b><span>Owed to you</span></div><div><b>${ss.length}</b><span>Sales made</span></div></div>
  <h2>Month by month</h2><div class=card><span class=lg><u style="background:var(--g)"></u>Sales<u style="background:var(--t)"></u>Expenses</span><div class=bars>${m.map((z,i)=>`<div><i><em class=a style="height:${z.s/mx*100}%" title="${fmt(z.s)}"></em><em class=b style="height:${z.e/mx*100}%" title="${fmt(z.e)}"></em></i>${mn[i]}</div>`).join('')}</div></div>
  <h2>Best products (by profit)</h2><div class="card tw">${rows?`<table><tr><th>Product</th><th class=n>Sales</th><th class=n>Profit</th><th class=n>Units</th></tr>${rows}</table>`:'<div class=empty>Add your first sale to see this.</div>'}</div>
- <h2>Unpaid balances</h2><div class="card tw">${dues?`<table><tr><th>Date</th><th>Item</th><th class=n>Balance</th><th></th></tr>${dues}</table>`:'<div class=empty>No unpaid balances. 🎉</div>'}</div>`;
- const sorted=[...S.sales].sort((a,b)=>b.d.localeCompare(a.d));
- $('sl').innerHTML=sorted.length?`<table><tr><th>Date</th><th>Item</th><th class=n>Qty</th><th class=n>Total</th><th class=n>Profit</th><th>Via</th><th class=n>Balance</th><th>Status</th><th></th></tr>${sorted.map(x=>`<tr><td>${x.d}</td><td>${esc(x.p)}</td><td class=n>${x.q}</td><td class=n>${fmt(tot(x))}</td><td class=n>${fmt(prof(x))}</td><td>${esc(x.m)}</td><td class=n>${fmt(bal(x))}</td><td><span class="chip ${status(x)}">${status(x)}</span></td><td style="white-space:nowrap"><button class="btn sm s" onclick="editS('${x.id}')">Edit</button> <button class="btn sm s" onclick="delS('${x.id}')">✕</button></td></tr>`).join('')}</table>`:'<div class=empty>No sales yet.</div>';
- const se=[...S.exp].sort((a,b)=>b.d.localeCompare(a.d));
- $('el').innerHTML=se.length?`<table><tr><th>Date</th><th>Category</th><th>Description</th><th class=n>Amount</th><th></th></tr>${se.map(x=>`<tr><td>${x.d}</td><td>${esc(x.c)}</td><td>${esc(x.n)}</td><td class=n>${fmt(x.a)}</td><td style="white-space:nowrap"><button class="btn sm s" onclick="editE('${x.id}')">Edit</button> <button class="btn sm s" onclick="delE('${x.id}')">✕</button></td></tr>`).join('')}</table>`:'<div class=empty>No expenses yet.</div>';
- $('pl').innerHTML=S.prods.map(p=>`<option value="${esc(p)}">`).join('');
- $('pls').innerHTML=S.prods.map((p,i)=>`<span class="chip Paid" style="display:inline-block;margin:0 6px 6px 0">${esc(p)} <a href="#" onclick="delP(${i});return false" style="color:inherit">✕</a></span>`).join('')||'<span class=sub>None yet. Products also get added automatically when you log a sale.</span>';
-}
-window.settle=id=>{const x=S.sales.find(s=>s.id==id);if(x){x.a=tot(x);save()}};
-window.delS=id=>{if(confirm('Delete this sale?')){S.sales=S.sales.filter(s=>s.id!=id);save()}};
-window.delE=id=>{if(confirm('Delete this expense?')){S.exp=S.exp.filter(s=>s.id!=id);save()}};
-window.delP=i=>{S.prods.splice(i,1);save()};
-let editS_=null,editE_=null;
+ <h2>Unpaid balances</h2><div class="card tw">${dues?`<table><tr><th>Date</th><th>Item</th><th class=n>Balance</th><th></th></tr>${dues}</table>`:'<div class=empty>No unpaid balances.</div>'}</div>`;
+ const so=[...A].sort((a,b)=>b.d.localeCompare(a.d)||b.t-a.t);
+ $('sl').innerHTML=so.length?`<table><tr><th>Date</th><th>Item</th><th class=n>Qty</th><th class=n>Total</th><th class=n>Profit</th><th>Via</th><th class=n>Balance</th><th>Status</th><th>By</th><th></th></tr>${so.map(x=>`<tr><td>${x.d}</td><td>${esc(x.p)}</td><td class=n>${x.q}</td><td class=n>${fmt(tot(x))}</td><td class=n>${fmt(prof(x))}</td><td>${esc(x.m)}</td><td class=n>${fmt(bal(x))}</td><td><span class="chip ${status(x)}">${status(x)}</span></td><td>${esc(who(x))}${pend('s',x.id)?' ⏳':''}</td><td style="white-space:nowrap"><button class="btn sm s" onclick="editS('${x.id}')">Edit</button> <button class="btn sm s" onclick="delS('${x.id}')">✕</button></td></tr>`).join('')}</table>`:'<div class=empty>No sales yet.</div>';
+ const eo=[...B].sort((a,b)=>b.d.localeCompare(a.d)||b.t-a.t);
+ $('el').innerHTML=eo.length?`<table><tr><th>Date</th><th>Category</th><th>Description</th><th class=n>Amount</th><th>By</th><th></th></tr>${eo.map(x=>`<tr><td>${x.d}</td><td>${esc(x.c)}</td><td>${esc(x.n)}</td><td class=n>${fmt(x.a)}</td><td>${esc(who(x))}${pend('e',x.id)?' ⏳':''}</td><td style="white-space:nowrap"><button class="btn sm s" onclick="editE('${x.id}')">Edit</button> <button class="btn sm s" onclick="delE('${x.id}')">✕</button></td></tr>`).join('')}</table>`:'<div class=empty>No expenses yet.</div>';
+ $('pl').innerHTML=[...new Set([...L('p').map(p=>p.name),...A.map(x=>x.p)])].sort().map(p=>`<option value="${esc(p)}">`).join('');
+ $('pls').innerHTML=L('p').sort((a,b)=>a.name.localeCompare(b.name)).map(p=>`<span class="chip Paid" style="display:inline-block;margin:0 6px 6px 0">${esc(p.name)} <a href="#" onclick="delP('${p.id}');return false" style="color:inherit">✕</a></span>`).join('')||'<span class=sub>None yet. Products also get added automatically when you log a sale.</span>';
+ status_()}
+window.settle=id=>{const x=S.s[id];if(x){x.a=tot(x);put('s',x)}};
+window.delS=id=>{if(confirm('Delete this sale?'))del('s',id)};
+window.delE=id=>{if(confirm('Delete this expense?'))del('e',id)};
+let eS=null,eE=null;
 function openSheet(k){$(k=='s'?'shs':'she').classList.add('open')}
 function closeSheets(){$('shs').classList.remove('open');$('she').classList.remove('open')}
-function resetS(){$('sht').textContent='New sale';editS_=null;$('sb').textContent='Add sale';$('sx').classList.add('hide');$('fs').reset();$('sd').value=today();$('sq').value=1;$('sk').value=0}
-function resetE(){$('eht').textContent='New expense';editE_=null;$('eb').textContent='Add expense';$('ex2').classList.add('hide');$('fe').reset();$('ed').value=today()}
-window.editS=id=>{const x=S.sales.find(s=>s.id==id);if(!x)return;editS_=id;$('sd').value=x.d;$('sp').value=x.p;$('sq').value=x.q;$('su').value=x.u;$('sk').value=x.k;$('sm').value=x.m;$('sa').value=x.a==null?'':x.a;$('sb').textContent='Save changes';$('sx').classList.remove('hide');$('sht').textContent='Edit sale';openSheet('s')};
-window.editE=id=>{const x=S.exp.find(s=>s.id==id);if(!x)return;editE_=id;$('ed').value=x.d;$('ec').value=x.c;$('ex').value=x.n;$('ea').value=x.a;$('eb').textContent='Save changes';$('ex2').classList.remove('hide');$('eht').textContent='Edit expense';openSheet('e')};
+function resetS(){$('sht').textContent='New sale';eS=null;$('sb').textContent='Add sale';$('sx').classList.add('hide');$('fs').reset();$('sd').value=today();$('sq').value=1;$('sk').value=0}
+function resetE(){$('eht').textContent='New expense';eE=null;$('eb').textContent='Add expense';$('ex2').classList.add('hide');$('fe').reset();$('ed').value=today()}
+window.editS=id=>{const x=S.s[id];if(!x)return;eS=id;$('sd').value=x.d;$('sp').value=x.p;$('sq').value=x.q;$('su').value=x.u;$('sk').value=x.k;$('sm').value=x.m;$('sa').value=x.a==null?'':x.a;$('sb').textContent='Save changes';$('sx').classList.remove('hide');$('sht').textContent='Edit sale';openSheet('s')};
+window.editE=id=>{const x=S.e[id];if(!x)return;eE=id;$('ed').value=x.d;$('ec').value=x.c;$('ex').value=x.n;$('ea').value=x.a;$('eb').textContent='Save changes';$('ex2').classList.remove('hide');$('eht').textContent='Edit expense';openSheet('e')};
 $('sx').onclick=()=>{resetS();closeSheets()};$('ex2').onclick=()=>{resetE();closeSheets()};
 ['shs','she'].forEach(i=>$(i).onclick=e=>{if(e.target.id==i){resetS();resetE();closeSheets()}});
 $('fab').onclick=()=>{if(cur=='exp'){resetE();openSheet('e')}else{resetS();openSheet('s')}};
-$('fs').onsubmit=e=>{e.preventDefault();const p=$('sp').value.trim(),a=$('sa').value;
- const o={id:editS_||uid(),d:$('sd').value,p,q:+$('sq').value,u:+$('su').value,k:+$('sk').value||0,m:$('sm').value,a:a===''?null:+a};
- if(editS_)S.sales=S.sales.map(s=>s.id==editS_?o:s);else S.sales.push(o);
- if(!S.prods.includes(p))S.prods.push(p);yr=+o.d.slice(0,4);resetS();closeSheets();save()};
-$('fe').onsubmit=e=>{e.preventDefault();const o={id:editE_||uid(),d:$('ed').value,c:$('ec').value,n:$('ex').value.trim(),a:+$('ea').value};
- if(editE_)S.exp=S.exp.map(s=>s.id==editE_?o:s);else S.exp.push(o);yr=+o.d.slice(0,4);resetE();closeSheets();save()};
-$('fp').onsubmit=e=>{e.preventDefault();const p=$('np').value.trim();if(p&&!S.prods.includes(p))S.prods.push(p);$('np').value='';save()};
+$('fs').onsubmit=e=>{e.preventDefault();const a=$('sa').value,old=eS&&S.s[eS];
+ const o={id:eS||uid(),d:$('sd').value,p:$('sp').value.trim(),q:+$('sq').value,u:+$('su').value,k:+$('sk').value||0,m:$('sm').value,a:a===''?null:+a,by:old?old.by:me};
+ yr=+o.d.slice(0,4);if(o.p&&!L('p').some(p=>p.name==o.p))add('p',{id:uid(),name:o.p});resetS();closeSheets();put('s',o)};
+$('fp').onsubmit=e=>{e.preventDefault();const n=$('np').value.trim();if(n&&!L('p').some(p=>p.name==n))put('p',{id:uid(),name:n});$('np').value=''};
+window.delP=id=>del('p',id);
+$('fe').onsubmit=e=>{e.preventDefault();const old=eE&&S.e[eE];
+ const o={id:eE||uid(),d:$('ed').value,c:$('ec').value,n:$('ex').value.trim(),a:+$('ea').value,by:old?old.by:me};
+ yr=+o.d.slice(0,4);resetE();closeSheets();put('e',o)};
 $('yr').onchange=e=>{yr=+e.target.value;render()};
-let cur='dash';$('nav').onclick=e=>{const bt=e.target.closest('button');if(!bt)return;const k=bt.dataset.t;document.querySelectorAll('section').forEach(s=>s.classList.toggle('hide',s.id!=k));[...$('nav').children].forEach(x=>x.classList.toggle('on',x==bt));cur=k;$('fab').classList.toggle('hide',k=='set');window.scrollTo(0,0)};
-document.body.append($('shs'),$('she'));
-$('rst').onclick=()=>{if(confirm('Erase ALL sales, expenses and products? This cannot be undone.')){S={sales:[],exp:[],prods:[]};save()}};
+$('nav').onclick=e=>{const bt=e.target.closest('button');if(!bt)return;const k=bt.dataset.t;document.querySelectorAll('section').forEach(s=>s.classList.toggle('hide',s.id!=k));[...$('nav').children].forEach(x=>x.classList.toggle('on',x==bt));cur=k;$('fab').classList.toggle('hide',k=='set');window.scrollTo(0,0)};
+
+$('rst').onclick=()=>{if(confirm('Erase ALL sales and expenses for everyone in this shop? This cannot be undone.')){['s','e'].forEach(k=>Object.keys(S[k]).forEach(i=>{delete S[k][i];queue(k,i,'del')}));commit()}};
 async function dl(name,data,type){
  try{const d=window.claude&&await window.claude.use('downloads');if(d){await d.save({filename:name,data});return}}catch(e){}
- try{const a=document.createElement('a');a.href=URL.createObjectURL(new Blob([data],{type}));a.download=name;document.body.appendChild(a);a.click();a.remove()}catch(e){$('sv').textContent='Downloads are not available in this view.'}}
-function csv(name,head,rows){const q=v=>'"'+String(v??'').replace(/"/g,'""')+'"';
- return dl(name,[head,...rows].map(r=>r.map(q).join(',')).join('\n'),'text/csv')}
-$('bk').onclick=()=>dl('sales-tracker-backup-'+today()+'.json',JSON.stringify(S),'application/json');
+ try{const a=document.createElement('a');a.href=URL.createObjectURL(new Blob([data],{type}));a.download=name;document.body.appendChild(a);a.click();a.remove()}catch(e){alert('Downloads are not available in this view.')}}
+const csv=(name,head,rows)=>{const q=v=>'"'+String(v??'').replace(/"/g,'""')+'"';return dl(name,[head,...rows].map(r=>r.map(q).join(',')).join('\n'),'text/csv')};
+$('exs').onclick=()=>csv('sales.csv',['Date','Product','Qty','Unit price','Unit cost','Total','Profit','Via','Paid','Balance','Recorded by'],L('s').sort((a,b)=>a.d.localeCompare(b.d)).map(x=>[x.d,x.p,x.q,x.u,x.k,tot(x),prof(x),x.m,paid(x),bal(x),who(x)]));
+$('exe').onclick=()=>csv('expenses.csv',['Date','Category','Description','Amount','Recorded by'],L('e').sort((a,b)=>a.d.localeCompare(b.d)).map(x=>[x.d,x.c,x.n,x.a,who(x)]));
+$('bk').onclick=()=>dl('sales-tracker-backup-'+today()+'.json',JSON.stringify({sales:L('s'),exp:L('e')}),'application/json');
 $('rs').onclick=()=>$('rf').click();
-$('rf').onchange=async e=>{const f=e.target.files[0];if(!f)return;try{const j=JSON.parse(await f.text());if(!Array.isArray(j.sales)||!Array.isArray(j.exp))throw 0;
- if(confirm('Replace everything on this device with the backup?')){S=Object.assign({sales:[],exp:[],prods:[]},j);save()}}catch(x){alert('That file is not a valid backup.')}e.target.value=''};
-$('exs').onclick=()=>csv('sales.csv',['Date','Product','Qty','Unit price','Unit cost','Total','Profit','Via','Paid','Balance'],S.sales.map(x=>[x.d,x.p,x.q,x.u,x.k,tot(x),prof(x),x.m,paid(x),bal(x)]));
-$('exe').onclick=()=>csv('expenses.csv',['Date','Category','Description','Amount'],S.exp.map(x=>[x.d,x.c,x.n,x.a]));
-$('sd').value=$('ed').value=today();
-try{const l=localStorage.getItem(KEY);if(l)S=Object.assign(S,JSON.parse(l))}catch(e){}
-render();status_();
-window.addEventListener('online',push);window.addEventListener('offline',status_);
-$('sv').textContent=window.claude?'Online: syncs between your devices when you are signed in. Works offline too; changes sync when you reconnect.':'Offline file: your data stays in this browser on this device. Use Backup/Restore to move it elsewhere.';
-(async()=>{try{const c=window.claude;if(!c)return;const u=await c.use('user'),d=await c.use('db');if(!u||!d)return;
- ref=d.collection('data/users/'+await u.id()).doc('tracker');const snap=await ref.get();
- if(snap.exists&&snap.data().s){const r=JSON.parse(snap.data().s);if((r.t||0)>(S.t||0)){S=Object.assign({sales:[],exp:[],prods:[]},r);try{localStorage.setItem(KEY,JSON.stringify(S))}catch(e){}render()}else await push()}
- else if(S.sales.length||S.exp.length)await push();
- status_()}catch(e){ref=null;status_()}})();
+$('rf').onchange=async e=>{const f=e.target.files[0];if(!f)return;try{const j=JSON.parse(await f.text());const ss=Array.isArray(j.sales)?j.sales:Object.values(j.sales||{}),xs=Array.isArray(j.exp)?j.exp:Object.values(j.exp||{});
+ if(!ss.length&&!xs.length)throw 0;if(confirm(`Add ${ss.length} sales and ${xs.length} expenses from this backup? Existing records are kept.`)){ss.forEach(x=>{x.id=x.id||uid();x.by=x.by||me;add('s',x)});xs.forEach(x=>{x.id=x.id||uid();x.by=x.by||me;add('e',x)});commit()}}catch(x){alert('That file is not a valid backup.')}e.target.value=''};
+// ---- start
+$('sd').value=$('ed').value=today();document.body.append($('shs'),$('she'));
+try{const l=localStorage.getItem(KEY);if(l)S=Object.assign(fresh(),JSON.parse(l))}catch(e){}
+render();
+addEventListener('online',()=>{afterAuth()});addEventListener('offline',status_);setInterval(()=>{if(S.shop)flush()},20000);
+if(window.supabase&&CFG.SUPABASE_URL&&CFG.SUPABASE_ANON_KEY){try{
+ sb=supabase.createClient(CFG.SUPABASE_URL,CFG.SUPABASE_ANON_KEY,{auth:{persistSession:true,autoRefreshToken:true}});
+ sb.auth.onAuthStateChange((ev,s)=>{sess=s;me=s&&s.user?s.user.id:null;
+  if(ev=='PASSWORD_RECOVERY')setTimeout(async()=>{const p=prompt('Type your new password (6+ characters):');if(p){const r=await sb.auth.updateUser({password:p});alert(r.error?r.error.message:'Password updated.')}},0);
+  setTimeout(()=>{status_();if(s)afterAuth()},0)});
+ sb.auth.getSession().then(({data})=>{if(data.session){sess=data.session;me=sess.user.id}status_();if(sess)afterAuth()})}catch(e){sb=null}}
+status_();
+
 if('serviceWorker' in navigator)addEventListener('load',()=>navigator.serviceWorker.register('sw.js').catch(()=>{}));
 </script></body></html>
