@@ -4,7 +4,6 @@
 <meta name="theme-color" content="#1b5e20"><meta name="mobile-web-app-capable" content="yes"><meta name="apple-mobile-web-app-capable" content="yes"><meta name="apple-mobile-web-app-title" content="Sales Tracker"><meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <link rel="manifest" href="manifest.json"><link rel="apple-touch-icon" href="icon-192.png"><link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='14' fill='%231b5e20'/%3E%3Cpath d='M12 44l14-14 9 9 17-19' stroke='%23fff' stroke-width='6' fill='none' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E">
 <title>My Sales Tracker (KSh)</title>
-<p id="currentTime"></p>
 <link href="https://fonts.googleapis.com/css2?family=Fraunces:wght@600;800&family=DM+Sans:wght@400;500;700&display=swap" rel="stylesheet">
 <style>
 :root{--bg:#fbf6ea;--card:#fff;--ink:#1d2a1f;--mute:#6b7466;--g:#1b5e20;--gl:#e3f1e2;--t:#c4521f;--tl:#fbe3d6;--line:#e3dcc8;--am:#b26a00;--aml:#fff0cf;
@@ -96,13 +95,28 @@ nav button{transition:color .2s,background .2s}
 #upd{position:fixed;left:12px;right:12px;top:calc(10px + env(safe-area-inset-top,0px));z-index:120;max-width:560px;margin:0 auto;background:var(--g);color:#fff;padding:12px 14px;border-radius:14px;box-shadow:0 8px 24px rgba(0,0,0,.3);display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;animation:slideDown .35s ease both}
 #upd.hide{display:none}
 @media(min-width:900px){#upd{left:230px;right:20px;margin:0}}
+#currentTime{margin:2px 0 0;font-size:12px;color:var(--mute);font-variant-numeric:tabular-nums}
+#chatBtn{position:fixed;left:16px;bottom:calc(78px + env(safe-area-inset-bottom,0px));width:52px;height:52px;border-radius:50%;border:0;background:var(--g);color:var(--bg);font-size:24px;box-shadow:0 4px 14px rgba(0,0,0,.35);z-index:15;cursor:pointer}
+#chat{position:fixed;left:0;right:0;bottom:0;height:78%;max-height:640px;z-index:50;background:var(--card);border-radius:20px 20px 0 0;box-shadow:0 -8px 30px rgba(0,0,0,.3);display:none;flex-direction:column;padding-bottom:env(safe-area-inset-bottom,0px)}
+#chat.open{display:flex;animation:slideUp .3s cubic-bezier(.2,.8,.2,1) both}
+.ch{display:flex;justify-content:space-between;align-items:center;padding:12px 16px;background:var(--g);color:var(--bg);border-radius:20px 20px 0 0}
+.ch b{font:700 16px 'Fraunces',Georgia,serif}.ch button{background:none;border:0;color:var(--bg);font-size:22px;cursor:pointer}
+#cm{flex:1;overflow-y:auto;padding:12px;display:flex;flex-direction:column;gap:8px}
+.mb{max-width:86%;padding:9px 12px;border-radius:14px;font-size:14px;line-height:1.45;animation:fadeUp .25s ease both}
+.mb.bot{background:var(--gl);color:var(--ink);align-self:flex-start;border-bottom-left-radius:4px}
+.mb.me{background:var(--g);color:var(--bg);align-self:flex-end;border-bottom-right-radius:4px}
+.qr{display:flex;flex-wrap:wrap;gap:6px;padding:0 12px 8px}
+.qr button{padding:6px 10px;border-radius:99px;border:1px solid var(--line);background:var(--bg);color:var(--ink);font:600 12px inherit;font-family:inherit;cursor:pointer}
+#cf{display:flex;gap:8px;padding:10px 12px;border-top:1px solid var(--line)}#cf input{flex:1}
+@media(min-width:900px){#chatBtn{left:230px;bottom:28px}#chat{left:auto;right:32px;bottom:90px;width:390px;height:540px;border-radius:18px}.ch{border-radius:18px 18px 0 0}#chat.open{animation:pop .22s ease both}}
 </style></head><body>
 <div id="splash" role="presentation"><div>
 <svg class="sp-logo" viewBox="0 0 64 64" width="88" height="88" aria-hidden="true"><rect width="64" height="64" rx="16" fill="rgba(255,255,255,.14)"/><path class="sp-line" d="M12 44l14-14 9 9 17-19"/><circle class="sp-dot" cx="52" cy="20" r="4.5"/></svg>
 <h1 class="sp-t"><span>Track.</span> <span>Manage.</span> <span>Grow</span></h1>
-<p class="sp-s">MY BUSINESS MY RECORDS!</p><div class="sp-bar"><i></i></div></div></div>
+<p class="sp-s">My Sales Tracker</p><div class="sp-bar"><i></i></div></div></div>
 <div class="w">
-<div class="top"><div><h1 style="font-size:22px">Sales Tracker</h1><div class="sub" id="st">Starting…</div></div>
+<div class="top"><div><h1 style="font-size:22px">Sales Tracker</h1><div class="sub" id="st">Starting…</div>
+<p id="currentTime"></p></div>
 <select id="yr" style="width:auto"></select></div>
 <nav id="nav"><button data-t="dash" class="on"><span>🏠</span>Home</button><button data-t="sales"><span>🧾</span>Sales</button><button data-t="exp"><span>💸</span>Expenses</button><button data-t="set"><span>⚙️</span>Setup</button></nav><button class="fab" id="fab" aria-label="Add">+</button>
 
@@ -139,6 +153,8 @@ nav button{transition:color .2s,background .2s}
 <button class="btn s" id="exs">Download sales (CSV)</button> <button class="btn s" id="exe">Download expenses (CSV)</button> <button class="btn s" id="bk">Backup (file)</button> <button class="btn s" id="rs">Restore backup</button><input type="file" id="rf" accept=".json" class="hide"> <button class="btn s" id="rst" style="color:var(--t)">Erase everything</button></div></section>
 <p class="sub" style="margin-top:24px">Profit = price − unit cost. Net profit = profit − expenses. Money owed counts all sales, all years. · Version <span id="ver"></span> · <a href="#" id="chk" style="color:inherit;text-decoration:underline">Check for updates</a></p>
 </div>
+<button id="chatBtn" aria-label="Help assistant">💬</button>
+<div id="chat" role="dialog" aria-label="Help assistant"><div class="ch"><b>Help assistant</b><button id="chatX" aria-label="Close">✕</button></div><div id="cm"></div><div class="qr" id="qr"></div><form id="cf"><input id="ci" placeholder="Ask a question…" autocomplete="off"><button class="btn">Send</button></form></div>
 <div id="toast"></div>
 <div id="upd" class="hide"></div>
 <script src="config.js"></script>
@@ -146,7 +162,7 @@ nav button{transition:color .2s,background .2s}
 <script>
 const $=id=>document.getElementById(id);
 // RELEASE INFO: change these two values every time you publish a new index.html (no apostrophes in notes)
-const APP_VERSION='1.0.5',APP_NOTES='Opening screen text colors fixed.';
+const APP_VERSION='1.0.6',APP_NOTES='Live clock and help assistant added.';
 const KEY='salesTrackerKE3',CFG=window.CFG||{};
 const fresh=()=>({s:{},e:{},p:{},q:[],lastPull:null,shop:null,role:'',uid:null});
 let S=fresh(),sb=null,sess=null,me=null,names={},busy=false,cur='dash',yr=new Date().getFullYear(),aKey='',syncErr='';
@@ -297,7 +313,45 @@ $('rf').onchange=async e=>{const f=e.target.files[0];if(!f)return;try{const j=JS
 // ---- start
 $('sd').value=$('ed').value=today();document.body.append($('shs'),$('she'));
 (function(){const s=$('splash');if(!s)return;let done=false;const end=()=>{if(done)return;done=true;s.classList.add('out');setTimeout(()=>{s.remove();freshDash()},600)};s.onclick=end;setTimeout(end,3100)})();
-$('ver').textContent=APP_VERSION;$('chk').onclick=e=>{e.preventDefault();checkUpdate(true)};
+$('ver').textContent=APP_VERSION;
+// ---- clock
+function tick(){const e=$('currentTime');if(e)e.textContent=new Date().toLocaleString('en-KE',{weekday:'short',day:'numeric',month:'short',year:'numeric',hour:'2-digit',minute:'2-digit',second:'2-digit'})}
+tick();setInterval(tick,1000);
+// ---- help assistant (built-in, works offline; not a live person)
+const SUP=String(CFG.SUPPORT_WHATSAPP||'').replace(/\D/g,'');
+const QRS=['Add a sale','Fix a mistake',"Today's sales",'Who owes me?','Work offline','Share with staff'];
+const fm=s=>esc(s).replace(/\*\*(.+?)\*\*/g,'<b>$1</b>').replace(/\n/g,'<br>');
+function answer(q){const s=q.toLowerCase(),has=(...w)=>w.some(x=>s.includes(x));
+ const A=L('s'),B=L('e'),sum=(a,f)=>a.reduce((t,x)=>t+f(x),0);
+ if(has('thank','asante'))return{t:'You are welcome! Ask me anything else about the app.'};
+ if(/^(hi|hello|hey|habari|jambo|mambo|good)/.test(s))return{t:'Hello! I can explain how to use the app and answer questions about your sales. What would you like to know?'};
+ if(has('today')){const a=A.filter(x=>x.d==today());return{t:a.length?`Today you have **${a.length}** sale${a.length>1?'s':''} totalling **${fmt(sum(a,tot))}** with profit of **${fmt(sum(a,prof))}**.`:'No sales recorded today yet. Tap the + button to add one.'}}
+ if(has('week')){const wk=weekKey(today()),a=A.filter(x=>weekKey(x.d)==wk),e=B.filter(x=>weekKey(x.d)==wk);return{t:`This week (Mon to Sun): **${a.length}** ${a.length==1?'sale':'sales'}, **${fmt(sum(a,tot))}** in sales, **${fmt(sum(a,prof))}** profit, **${fmt(sum(e,x=>x.a))}** expenses.\nSee the Weekly totals table on the Home tab for earlier weeks.`}}
+ if(has('owe','unpaid','balance','debt','credit','deni')){const a=A.filter(x=>bal(x)>0);return{t:a.length?`**${a.length}** sale${a.length>1?'s have':' has'} unpaid balances totalling **${fmt(sum(a,bal))}**. They are listed under Unpaid balances on the Home tab, where you can tap Mark paid once the customer pays.`:'Nobody owes you anything right now.'}}
+ if(has('expense')&&has('add','record','new','log','enter'))return{t:'To record an expense: open the **Expenses** tab, tap the **+** button, choose a category, enter the amount, and tap Add expense. Do not log stock you resell, because the unit cost on each sale already covers it.'};
+ if(has('profit','total','how much','earn','income','expense','net')){const ya=A.filter(x=>+x.d.slice(0,4)==yr),ye=B.filter(x=>+x.d.slice(0,4)==yr),p=sum(ya,prof),e=sum(ye,x=>x.a);return{t:`For ${yr}: sales **${fmt(sum(ya,tot))}**, gross profit **${fmt(p)}**, expenses **${fmt(e)}**, net profit **${fmt(p-e)}**.`}}
+ if(has('whatsapp','human','agent','person','call','contact','support','owner','help me'))return SUP?{t:'I am a built-in helper, not a live person. For a real person, message support on WhatsApp:',wa:1}:{t:'I am a built-in helper, not a live person. For personal help, contact the person who set up this app for you.'};
+ if(has('offline','internet','network','sync','synced','data bundle')){const st=$('st').textContent;return{t:`You can record sales with no internet. They are saved on your phone (a clock icon shows entries waiting) and upload automatically when the device is online again.\nCurrent status: **${st}**`}}
+ if(has('share','staff','attendant','invite','team','shop code','join','second')){return{t:S.shop?`Give the person your shop code **${S.shop.code}**. They open the app link, create their own account, choose "I work in someone's shop" and type the code. You will both see the same sales, and the By column shows who recorded each one.`:'First sign in (Setup, Account and sync) and tap Create my shop. You will get a 6-character shop code to give to the person who sells for you. They create an account and choose "I work in someone\'s shop".'}}
+ if(has('password','forgot','reset','login','log in','sign in','sign-in','account'))return{t:'Sign in under **Setup, Account and sync**. Tick Show password to check what you typed. If you forgot it, tap Forgot password once, wait a few minutes and open the newest email link. Tapping it many times can trigger an email rate limit, so wait an hour if you see that.'};
+ if(has('mistake','edit','correct','wrong','change','fix','update a sale'))return{t:'To fix a mistake: open the **Sales** (or **Expenses**) tab, find the row, tap **Edit**, change the values and tap **Save changes**. Totals update straight away.'};
+ if(has('delete','remove','erase'))return{t:'To delete one entry, tap the ✕ on its row. The owner can erase everything under Setup, Your data. Download a backup first if you are unsure.'};
+ if(has('backup','export','csv','download','restore'))return{t:'Go to **Setup, Your data**: download Sales or Expenses as CSV, make a Backup file, or Restore from a backup file. Keep a backup weekly.'};
+ if(has('version','new version','upgrade'))return{t:`You are using version **${APP_VERSION}**. When a new version is published, a green banner appears with Update now. You can also tap Setup, Check for updates.`};
+ if(has('install','home screen','app icon'))return{t:'Open the app link in Chrome with internet, then use the browser menu and choose **Install app** or **Add to Home Screen**. On Windows, use the Install icon in the address bar of Chrome or Edge.'};
+ if(has('product','service','item'))return{t:'Manage products under **Setup, My products / services**. New products are also added automatically when you record a sale with a new name.'};
+ if(has('mpesa','m-pesa','cash','payment','paid','pay later','bank'))return{t:'When adding a sale, choose how the customer paid (M-Pesa, Cash, Bank or Pay Later). If they paid only part, type the amount in Amount paid. Leave it blank if they paid in full. The balance is tracked as unpaid until you tap Mark paid.'};
+ if(has('add','record','new sale','sale','sell','enter'))return{t:'To record a sale: tap the **+** button (or open the Sales tab), pick the date, type the product, quantity, unit price and unit cost, choose the payment method, then tap **Add sale**. Unit cost is what ONE item cost you, which is how profit is calculated.'};
+ return{t:'I did not quite get that. Try asking about adding a sale, fixing a mistake, today\'s sales, unpaid balances, working offline or sharing with staff.'}}
+function chatSay(who,html){const m=document.createElement('div');m.className='mb '+who;m.innerHTML=html;$('cm').appendChild(m);$('cm').scrollTop=$('cm').scrollHeight}
+function chatAsk(q){q=q.trim();if(!q)return;chatSay('me',esc(q));$('ci').value='';
+ setTimeout(()=>{const r=answer(q);let h=fm(r.t);if(r.wa)h+=`<br><a class="btn sm" style="display:inline-block;margin-top:6px;text-decoration:none" target="_blank" rel="noopener" href="https://wa.me/${SUP}?text=${encodeURIComponent('Hello, I need help with the sales tracker.')}">Open WhatsApp</a>`;chatSay('bot',h)},350)}
+function chatOpen(o){$('chat').classList.toggle('open',o);if(o&&!$('cm').children.length){chatSay('bot',fm('Hi! I am your help assistant. Ask me how to use the app, or about your sales (for example "today\'s sales"). I am a built-in helper that works offline, not a live person.'));$('qr').innerHTML=QRS.map(x=>`<button type="button">${esc(x)}</button>`).join('')}
+ if(o&&window.matchMedia&&matchMedia('(hover:hover)').matches)$('ci').focus()}
+$('chatBtn').onclick=()=>chatOpen(!$('chat').classList.contains('open'));$('chatX').onclick=()=>chatOpen(false);
+$('cf').onsubmit=e=>{e.preventDefault();chatAsk($('ci').value)};
+$('qr').onclick=e=>{const b=e.target.closest('button');if(b)chatAsk(b.textContent)};
+$('chk').onclick=e=>{e.preventDefault();checkUpdate(true)};
 setTimeout(()=>checkUpdate(false),4500);
 document.addEventListener('visibilitychange',()=>{if(document.visibilityState=='visible'&&Date.now()-lastChk>30*60*1000)checkUpdate(false)});
 try{const l=localStorage.getItem(KEY);if(l)S=Object.assign(fresh(),JSON.parse(l))}catch(e){}
