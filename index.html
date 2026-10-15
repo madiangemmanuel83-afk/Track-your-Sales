@@ -51,7 +51,56 @@ input,select{padding:9px;border:1px solid var(--line);border-radius:8px;backgrou
  table{font-size:14px}th,td{padding:9px 8px}
 }
 @media(min-width:1200px){.w{margin-left:max(210px,calc(50% - 390px))}}
-</style></head><body><div class="w">
+
+@keyframes fadeUp{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:none}}
+@keyframes fade{from{opacity:0}to{opacity:1}}
+@keyframes slideUp{from{transform:translateY(100%)}to{transform:none}}
+@keyframes pop{from{opacity:0;transform:scale(.94)}to{opacity:1;transform:none}}
+@keyframes grow{from{transform:scaleY(0)}to{transform:scaleY(1)}}
+@keyframes pulse{0%,100%{box-shadow:0 4px 14px rgba(0,0,0,.35)}50%{box-shadow:0 4px 24px rgba(196,82,31,.65)}}
+section:not(.hide){animation:fadeUp .28s ease both}
+.sheet.open{animation:fade .2s ease both}
+.sheet.open .card{animation:slideUp .3s cubic-bezier(.2,.8,.2,1) both}
+.fresh .kp>div,.fresh>.card{animation:fadeUp .45s ease both}
+.fresh .kp>div:nth-child(2){animation-delay:.06s}.fresh .kp>div:nth-child(3){animation-delay:.12s}.fresh .kp>div:nth-child(4){animation-delay:.18s}.fresh .kp>div:nth-child(5){animation-delay:.24s}.fresh .kp>div:nth-child(6){animation-delay:.3s}.fresh .kp>div:nth-child(7){animation-delay:.36s}
+.fresh .bars em{transform-origin:bottom;animation:grow .7s cubic-bezier(.2,.8,.2,1) both}
+.fab{animation:pulse 2.4s ease-in-out 3}
+.btn{transition:transform .12s,filter .15s}.btn:active{transform:scale(.96)}.btn:hover{filter:brightness(1.07)}
+nav button{transition:color .2s,background .2s}
+.kp>div{transition:transform .18s,box-shadow .18s}
+@media(hover:hover){.kp>div:hover{transform:translateY(-3px);box-shadow:0 6px 16px rgba(0,0,0,.12)}}
+#toast{position:fixed;left:50%;bottom:calc(92px + env(safe-area-inset-bottom,0px));transform:translate(-50%,20px);background:var(--ink);color:var(--bg);padding:10px 18px;border-radius:99px;font-weight:700;font-size:14px;opacity:0;pointer-events:none;transition:opacity .25s,transform .25s;z-index:40}
+#toast.on{opacity:1;transform:translate(-50%,0)}
+@media(min-width:900px){.sheet.open .card{animation:pop .22s ease both}#toast{bottom:28px}}
+@media(prefers-reduced-motion:reduce){*,*::before,*::after{animation:none!important;transition:none!important}}
+
+#splash{position:fixed;inset:0;z-index:100;display:flex;align-items:center;justify-content:center;text-align:center;padding:env(safe-area-inset-top,0px) 24px env(safe-area-inset-bottom,0px);background:radial-gradient(circle at 50% 35%,#2e7d32 0%,#1b5e20 45%,#0d3311 100%);color:#fff;transition:opacity .55s ease,transform .55s ease}
+#splash.out{opacity:0;transform:scale(1.04);pointer-events:none}
+.sp-logo{display:block;margin:0 auto 22px;animation:spIn .7s cubic-bezier(.2,.8,.2,1) both}
+.sp-line{fill:none;stroke:#fff;stroke-width:5;stroke-linecap:round;stroke-linejoin:round;stroke-dasharray:80;stroke-dashoffset:80;animation:spDraw 1s .35s ease forwards}
+.sp-dot{fill:#ffb74d;opacity:0;transform-box:fill-box;transform-origin:center;animation:spDotIn .4s 1.2s ease forwards}
+.sp-t{font:800 clamp(30px,8vw,52px)/1.15 'Fraunces',Georgia,serif;margin:0;letter-spacing:.5px}
+.sp-t span{display:inline-block;opacity:0;animation:spWord .7s cubic-bezier(.2,.8,.2,1) forwards}
+.sp-t span:nth-child(1){animation-delay:.6s}.sp-t span:nth-child(2){animation-delay:1.1s}.sp-t span:nth-child(3){animation-delay:1.6s;color:#ffb74d}
+.sp-s{margin:14px 0 0;font:500 13px 'DM Sans',system-ui,sans-serif;letter-spacing:3px;text-transform:uppercase;opacity:0;animation:fade .6s 2s ease forwards;color:rgba(255,255,255,.8)}
+.sp-bar{width:140px;height:3px;background:rgba(255,255,255,.18);border-radius:3px;margin:26px auto 0;overflow:hidden}
+.sp-bar i{display:block;height:100%;width:100%;background:#ffb74d;transform:translateX(-100%);animation:spBar 2.9s linear forwards}
+@keyframes spIn{from{opacity:0;transform:scale(.6)}to{opacity:1;transform:none}}
+@keyframes spDraw{to{stroke-dashoffset:0}}
+@keyframes spDotIn{from{opacity:0;transform:scale(0)}to{opacity:1;transform:scale(1)}}
+@keyframes spWord{from{opacity:0;transform:translateY(22px) scale(.96)}to{opacity:1;transform:none}}
+@keyframes spBar{to{transform:translateX(0)}}
+@media(prefers-reduced-motion:reduce){.sp-t span,.sp-s,.sp-dot{opacity:1!important}.sp-line{stroke-dashoffset:0}.sp-bar i{transform:none}}
+@keyframes slideDown{from{opacity:0;transform:translateY(-20px)}to{opacity:1;transform:none}}
+#upd{position:fixed;left:12px;right:12px;top:calc(10px + env(safe-area-inset-top,0px));z-index:120;max-width:560px;margin:0 auto;background:var(--g);color:#fff;padding:12px 14px;border-radius:14px;box-shadow:0 8px 24px rgba(0,0,0,.3);display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;animation:slideDown .35s ease both}
+#upd.hide{display:none}
+@media(min-width:900px){#upd{left:230px;right:20px;margin:0}}
+</style></head><body>
+<div id="splash" role="presentation"><div>
+<svg class="sp-logo" viewBox="0 0 64 64" width="88" height="88" aria-hidden="true"><rect width="64" height="64" rx="16" fill="rgba(255,255,255,.14)"/><path class="sp-line" d="M12 44l14-14 9 9 17-19"/><circle class="sp-dot" cx="52" cy="20" r="4.5"/></svg>
+<h1 class="sp-t"><span>Track.</span> <span>Manage.</span> <span>Grow</span></h1>
+<p class="sp-s">My Sales Tracker</p><div class="sp-bar"><i></i></div></div></div>
+<div class="w">
 <div class="top"><div><h1 style="font-size:22px">Sales Tracker</h1><div class="sub" id="st">Starting…</div></div>
 <select id="yr" style="width:auto"></select></div>
 <nav id="nav"><button data-t="dash" class="on"><span>🏠</span>Home</button><button data-t="sales"><span>🧾</span>Sales</button><button data-t="exp"><span>💸</span>Expenses</button><button data-t="set"><span>⚙️</span>Setup</button></nav><button class="fab" id="fab" aria-label="Add">+</button>
@@ -87,12 +136,16 @@ input,select{padding:9px;border:1px solid var(--line);border-radius:8px;backgrou
 <h2>Account &amp; sync</h2><div class="card" id="acct"></div>
 <h2>Your data</h2><div class="card">
 <button class="btn s" id="exs">Download sales (CSV)</button> <button class="btn s" id="exe">Download expenses (CSV)</button> <button class="btn s" id="bk">Backup (file)</button> <button class="btn s" id="rs">Restore backup</button><input type="file" id="rf" accept=".json" class="hide"> <button class="btn s" id="rst" style="color:var(--t)">Erase everything</button></div></section>
-<p class="sub" style="margin-top:24px">Profit = price − unit cost. Net profit = profit − expenses. Money owed counts all sales, all years. · Version 1.0.1</p>
+<p class="sub" style="margin-top:24px">Profit = price − unit cost. Net profit = profit − expenses. Money owed counts all sales, all years. · Version <span id="ver"></span> · <a href="#" id="chk" style="color:inherit;text-decoration:underline">Check for updates</a></p>
 </div>
+<div id="toast"></div>
+<div id="upd" class="hide"></div>
 <script src="config.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.min.js"></script>
 <script>
 const $=id=>document.getElementById(id);
+// RELEASE INFO: change these two values every time you publish a new index.html (no apostrophes in notes)
+const APP_VERSION='1.0.4',APP_NOTES='Automatic update alerts added.';
 const KEY='salesTrackerKE3',CFG=window.CFG||{};
 const fresh=()=>({s:{},e:{},p:{},q:[],lastPull:null,shop:null,role:'',uid:null});
 let S=fresh(),sb=null,sess=null,me=null,names={},busy=false,cur='dash',yr=new Date().getFullYear(),aKey='',syncErr='';
@@ -107,8 +160,8 @@ const persist=()=>{try{localStorage.setItem(KEY,JSON.stringify(S))}catch(e){}};
 const pend=(k,id)=>S.q.some(o=>o.k==k&&o.id==id);
 function queue(k,id,op){S.q=S.q.filter(o=>!(o.k==k&&o.id==id));S.q.push({k,id,op})}
 function add(k,r){r.by=r.by||me;r.t=r.t||Date.now();S[k][r.id]=r;queue(k,r.id,'set')}
-function put(k,r){r.t=Date.now();add(k,r);commit()}
-function del(k,id){delete S[k][id];queue(k,id,'del');commit()}
+function put(k,r){r.t=Date.now();add(k,r);commit();toast('Saved \u2713')}
+function del(k,id){delete S[k][id];queue(k,id,'del');commit();toast('Deleted')}
 function commit(){persist();render();flush()}
 const who=x=>!x.by?'\u2014':x.by==me?'You':(names[x.by]||'Team');
 function status_(){const n=S.q.length,el=$('st');
@@ -161,6 +214,20 @@ let allWeeks=false;
 const MON=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
 function weekKey(d){const t=new Date(d+'T00:00:00Z');t.setUTCDate(t.getUTCDate()-((t.getUTCDay()+6)%7));return t.toISOString().slice(0,10)}
 function wlabel(w){const a=new Date(w+'T00:00:00Z'),b=new Date(a.getTime()+6*864e5);return a.getUTCDate()+' '+MON[a.getUTCMonth()]+' \u2013 '+b.getUTCDate()+' '+MON[b.getUTCMonth()]}
+const vcmp=(a,b)=>{const x=a.split('.').map(Number),y=b.split('.').map(Number);for(let i=0;i<3;i++){const d=(x[i]||0)-(y[i]||0);if(d)return d>0?1:-1}return 0};
+let lastChk=0;
+async function checkUpdate(manual){if(!navigator.onLine){if(manual)toast('Connect to the internet to check');return}
+ try{const r=await fetch('index.html?v='+Date.now(),{cache:'no-store'});if(!r.ok)throw 0;const h=await r.text();
+  const v=(h.match(/APP_VERSION\s*=\s*'(\d+\.\d+\.\d+)'/)||[])[1],n=(h.match(/APP_NOTES\s*=\s*'([^']*)'/)||[])[1]||'';lastChk=Date.now();
+  if(v&&vcmp(v,APP_VERSION)>0)showUpdate(v,n);else if(manual)toast('You are up to date \u2713')}catch(e){if(manual)toast('Could not check. Try again later.')}}
+function showUpdate(v,n){const u=$('upd');u.innerHTML=`<div><b>New version ${esc(v)} is ready</b>${n?`<div style="font-size:13px;opacity:.9">${esc(n)}</div>`:''}</div><div style="display:flex;gap:8px"><button class="btn sm" id="updgo">Update now</button><button class="btn sm s" id="updno">Later</button></div>`;u.classList.remove('hide');
+ $('updno').onclick=()=>u.classList.add('hide');
+ $('updgo').onclick=async()=>{try{if(window.caches){for(const k of await caches.keys())await caches.delete(k)}const reg=navigator.serviceWorker&&await navigator.serviceWorker.getRegistration();if(reg)await reg.update()}catch(e){}location.reload()}}
+let tt;function toast(m){const e=$('toast');e.textContent=m;e.classList.add('on');clearTimeout(tt);tt=setTimeout(()=>e.classList.remove('on'),1800)}
+let ft;function freshDash(){const d=$('dash');d.classList.remove('fresh');void d.offsetWidth;d.classList.add('fresh');render();clearTimeout(ft);ft=setTimeout(()=>d.classList.remove('fresh'),1200)}
+function countUp(){if(!window.requestAnimationFrame||(window.matchMedia&&matchMedia('(prefers-reduced-motion: reduce)').matches))return;
+ document.querySelectorAll('#dash .kp b').forEach(b=>{const m=b.textContent.match(/^(KSh )?(-?[\d,]+)$/);if(!m)return;const to=+m[2].replace(/,/g,''),pre=m[1]||'',t0=performance.now();
+  const step=now=>{const p=Math.min(1,(now-t0)/700),v=Math.round(to*(1-Math.pow(1-p,3)));b.textContent=pre+v.toLocaleString('en-KE');if(p<1)requestAnimationFrame(step)};requestAnimationFrame(step)})}
 window.toggleWeeks=()=>{allWeeks=!allWeeks;render()};
 function render(){
  const A=L('s'),B=L('e'),yrs=new Set([new Date().getFullYear(),yr]);[...A,...B].forEach(x=>yrs.add(+x.d.slice(0,4)));
@@ -183,6 +250,7 @@ function render(){
  ${weeklyHtml}
  <h2>Best products (by profit)</h2><div class="card tw">${rows?`<table><tr><th>Product</th><th class=n>Sales</th><th class=n>Profit</th><th class=n>Units</th></tr>${rows}</table>`:'<div class=empty>Add your first sale to see this.</div>'}</div>
  <h2>Unpaid balances</h2><div class="card tw">${dues?`<table><tr><th>Date</th><th>Item</th><th class=n>Balance</th><th></th></tr>${dues}</table>`:'<div class=empty>No unpaid balances.</div>'}</div>`;
+ if($('dash').classList.contains('fresh'))countUp();
  const so=[...A].sort((a,b)=>b.d.localeCompare(a.d)||b.t-a.t);
  $('sl').innerHTML=so.length?`<table><tr><th>Date</th><th>Item</th><th class=n>Qty</th><th class=n>Total</th><th class=n>Profit</th><th>Via</th><th class=n>Balance</th><th>Status</th><th>By</th><th></th></tr>${so.map(x=>`<tr><td>${x.d}</td><td>${esc(x.p)}</td><td class=n>${x.q}</td><td class=n>${fmt(tot(x))}</td><td class=n>${fmt(prof(x))}</td><td>${esc(x.m)}</td><td class=n>${fmt(bal(x))}</td><td><span class="chip ${status(x)}">${status(x)}</span></td><td>${esc(who(x))}${pend('s',x.id)?' ⏳':''}</td><td style="white-space:nowrap"><button class="btn sm s" onclick="editS('${x.id}')">Edit</button> <button class="btn sm s" onclick="delS('${x.id}')">✕</button></td></tr>`).join('')}</table>`:'<div class=empty>No sales yet.</div>';
  const eo=[...B].sort((a,b)=>b.d.localeCompare(a.d)||b.t-a.t);
@@ -212,7 +280,7 @@ $('fe').onsubmit=e=>{e.preventDefault();const old=eE&&S.e[eE];
  const o={id:eE||uid(),d:$('ed').value,c:$('ec').value,n:$('ex').value.trim(),a:+$('ea').value,by:old?old.by:me};
  yr=+o.d.slice(0,4);resetE();closeSheets();put('e',o)};
 $('yr').onchange=e=>{yr=+e.target.value;render()};
-$('nav').onclick=e=>{const bt=e.target.closest('button');if(!bt)return;const k=bt.dataset.t;document.querySelectorAll('section').forEach(s=>s.classList.toggle('hide',s.id!=k));[...$('nav').children].forEach(x=>x.classList.toggle('on',x==bt));cur=k;$('fab').classList.toggle('hide',k=='set');window.scrollTo(0,0)};
+$('nav').onclick=e=>{const bt=e.target.closest('button');if(!bt)return;const k=bt.dataset.t;document.querySelectorAll('section').forEach(s=>s.classList.toggle('hide',s.id!=k));[...$('nav').children].forEach(x=>x.classList.toggle('on',x==bt));cur=k;$('fab').classList.toggle('hide',k=='set');window.scrollTo(0,0);if(k=='dash')freshDash()};
 
 $('rst').onclick=()=>{if(confirm('Erase ALL sales and expenses for everyone in this shop? This cannot be undone.')){['s','e'].forEach(k=>Object.keys(S[k]).forEach(i=>{delete S[k][i];queue(k,i,'del')}));commit()}};
 async function dl(name,data,type){
@@ -227,8 +295,12 @@ $('rf').onchange=async e=>{const f=e.target.files[0];if(!f)return;try{const j=JS
  if(!ss.length&&!xs.length)throw 0;if(confirm(`Add ${ss.length} sales and ${xs.length} expenses from this backup? Existing records are kept.`)){ss.forEach(x=>{x.id=x.id||uid();x.by=x.by||me;add('s',x)});xs.forEach(x=>{x.id=x.id||uid();x.by=x.by||me;add('e',x)});commit()}}catch(x){alert('That file is not a valid backup.')}e.target.value=''};
 // ---- start
 $('sd').value=$('ed').value=today();document.body.append($('shs'),$('she'));
+(function(){const s=$('splash');if(!s)return;let done=false;const end=()=>{if(done)return;done=true;s.classList.add('out');setTimeout(()=>{s.remove();freshDash()},600)};s.onclick=end;setTimeout(end,3100)})();
+$('ver').textContent=APP_VERSION;$('chk').onclick=e=>{e.preventDefault();checkUpdate(true)};
+setTimeout(()=>checkUpdate(false),4500);
+document.addEventListener('visibilitychange',()=>{if(document.visibilityState=='visible'&&Date.now()-lastChk>30*60*1000)checkUpdate(false)});
 try{const l=localStorage.getItem(KEY);if(l)S=Object.assign(fresh(),JSON.parse(l))}catch(e){}
-render();
+render();freshDash();
 addEventListener('online',()=>{afterAuth()});addEventListener('offline',status_);setInterval(()=>{if(S.shop)flush()},20000);
 if(window.supabase&&CFG.SUPABASE_URL&&CFG.SUPABASE_ANON_KEY){try{
  sb=supabase.createClient(CFG.SUPABASE_URL,CFG.SUPABASE_ANON_KEY,{auth:{persistSession:true,autoRefreshToken:true}});
