@@ -362,7 +362,7 @@ function go(k){document.querySelectorAll('section').forEach(s=>s.classList.toggl
 $('nav').onclick=$('nav2').onclick=e=>{const bt=e.target.closest('button');if(bt)go(bt.dataset.t)};
 function setMode(m){mode=m;$('mode').classList.add('out');setTimeout(()=>$('mode').classList.add('hide'),420);
  $('nav').classList.toggle('hide',m!='shop');$('nav2').classList.toggle('hide',m!='mpesa');$('yr').classList.toggle('hide',m!='shop');
- $('ttl').textContent=m=='shop'?'Sales Tracker':'M-PESA Daily';$('modeBtn').textContent=(m=='shop'?'SHOP':'M-PESA')+' \u21c4';
+ $('ttl').textContent=m=='shop'?'Sales Tracker':'M-PESA Daily Transactions';$('modeBtn').textContent=(m=='shop'?'SHOP':'M-PESA')+' \u21c4';
  if(m=='mpesa')mset(today());go(m=='shop'?'dash':'mdaily')}
 $('mM').onclick=()=>setMode('mpesa');$('mS').onclick=()=>setMode('shop');
 $('modeBtn').onclick=()=>{$('mode').classList.remove('hide');requestAnimationFrame(()=>$('mode').classList.remove('out'))};
